@@ -13,16 +13,32 @@ Servo missile_trigger;
 #define SERVO_VALUE_FIRE 1000
 #define SERVO_VALUE_IDLE 1000
 
-bool is_armed;
-uint8_t control_mode;
-bool is_missile_ready;
+#define CYLINDER_MOTOR_PIN 5
+
+Servo pitch_servo;
+#define PITCH_SERVO_PIN 7;
+Servo yaw_servo;
+#define YAW_SERVO_PIN 8;
+
+bool __is_armed;
+uint8_t __control_mode;
+bool __is_missile_ready;
 
 void setup() {
+	// initialize output pins
+	pinMode(output, CYLINDER_MOTOR_PIN);
 	missile_trigger.attach(TRIGGER_PIN);
+	pitch_servo.attach(PITCH_SERVO_PIN);
+	yaw_servo.attach(YAW_SERVO_PIN);
 
 	Serial.begin(115200);
 	imu.begin(115200);
 }
+
+void change_mode(int mode);
+void move_turret(double pitch, double yaw);
+void fire();
+void reload();
 
 void loop() {
 	if (Serial.available() > 0) {
@@ -52,7 +68,10 @@ void loop() {
 					change_mode(param(read_buffer, 0));
 					break;
 				case CMD_MOVE:
-					move_turret(param(read_buffer, 0), param(read_buffer, 1))
+					move_turret(
+							param_double(read_buffer, 0) / 100.0, 
+							param_double(read_buffer, 1) / 100.0
+							);
 					break;
 				case CMD_FIRE:
 					fire();
@@ -62,11 +81,24 @@ void loop() {
 	}
 }
 
+void change_mode(uint8_t mode) {
+	if (mode == MODE_MANUAL || mode == MODE_AUTO) {
+		__control_mode = mode;
+	}
+}
+
+void move_turret(double pitch, double yaw) {
+	if (__control_mode == MODE_AUTO) {
+		__desired_pitch = constrain(pitch * 500 / 45, -500, 500) + 1500;
+		__desired_yaw = constrain(yaw * 500 / 45, -500, 500) + 1500;
+	}
+}
+
 void fire() {
-	if (!is_armed || !is_missile_ready)	// only fire when armed
+	if (!__is_armed || !__is_missile_ready)	// only fire when armed
 		return;
 
-	is_missile_ready = false;	
+	__is_missile_ready = false;	
 	missile_trigger.writeMicroseconds(SERVO_VALUE_FIRE);
 	delay(70);
 	missile_trigger.writeMicroseconds(SERVO_VALUE_IDLE);
@@ -74,5 +106,5 @@ void fire() {
 }
 
 void reload() {
-	is_missile_ready = true;
+	__is_missile_ready = true;
 }

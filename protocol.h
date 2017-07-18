@@ -14,6 +14,8 @@
 #define PARAM_MODE_MANUAL 0x01
 #define PARAM_MODE_AUTO 0x02
 
-#define param(buf, i) ((buf)[i*2] + (uint16_t)(buf)[i*2] << 8)
+#define param_uint8(buf, i) ((buf)[i*2])
+#define param_uint16(buf, i) ((buf)[i*2] + (uint16_t)(buf)[i*2 + 1] << 8)
+#define param_double(buf, i) ((double)param_uint16(buf, i))
 
 #endif
